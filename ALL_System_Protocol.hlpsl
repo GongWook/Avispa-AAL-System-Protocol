@@ -1,0 +1,177 @@
+%%%% version 2
+
+role sensor(Sensor,Gateway:agent, Hash:hash_func, PUg:public_key, SND,RCV:channel(dy))
+played_by Sensor def=
+
+	local
+		State	: nat,
+		Ns	: text,
+		IDs	: nat
+
+	init
+		State	:=0 /\ IDs :=123
+
+	transition
+
+	1. State  = 0 /\ RCV(start) =|>
+	   State':= 3 /\ Ns' := new()
+		      /\ SND({Hash(IDs).Ns'}_PUg)
+
+
+	2. State  = 3 /\ RCV({Ns}_inv(PUg)) =|>
+	   State':= 4 /\ request(Sensor, Gateway, auth_1, Ns)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role gateway(Sensor,Gateway,Server,Platform:agent, Hash:hash_func, PUg,PUauth:public_key, SND,RCV:channel(dy))
+played_by Gateway def=
+
+	local
+		State			: nat,
+		Ns,Ng,Np		: text,
+		IDs,IDp,IDg		: nat,
+		SIDs			: nat,
+		SVIDp			: nat,
+		PUp			: public_key,
+		Ks			: symmetric_key
+
+	init
+		State :=1 /\ IDs:=123 /\ IDg:=789 /\ IDp:=777
+
+	transition
+
+	1. State  = 1 /\ RCV({Hash(SIDs').Ns'}_PUg) =|>
+	   State':= 3 /\ equal(123,SIDs')
+		      /\ SND({Ns'}_inv(PUg))
+		      /\ witness(Gateway,Sensor,auth_1,Ns')
+		      /\ SND({IDg.IDp.Hash(IDs)}_PUauth)
+
+	2. State  = 3 /\ RCV({SVIDp'.PUp'}_inv(PUauth)) =|>
+	   State':= 5 /\ Ng':=new()
+		      /\ SND({Ng'.IDg.Hash(IDs)}_PUp)
+
+	3. State  = 5 /\ RCV({{IDp.Ng.IDg.Hash(IDs).Ks'}_inv(PUauth).Np'}_PUg) =|>
+	   State':= 9 /\ request(Gateway,Platform,auth_3,Ng)
+		      /\ SND({Np'}_Ks)
+		      /\ witness(Gateway,Platform,auth_4,Np')
+
+
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role server(Server,Gateway,Platform:agent, Hash:hash_func, PUg,PUauth,PUp:public_key, SND,RCV:channel(dy))
+played_by Server def=
+
+	local
+		State			: nat,
+		Ng			: text,
+		IDp,IDg,IDs,GIDp	: nat,
+		PIDp,PIDg,PIDs		: nat,
+		Ks			: symmetric_key
+
+	init
+		State :=2 /\ IDp :=777
+
+	transition
+
+	1. State  = 2 /\ RCV({IDg'.GIDp'.Hash(IDs')}_PUauth) =|>
+	   State':= 4 /\ equal(777,GIDp')
+		      /\ SND({IDp.PUp}_inv(PUauth))
+		      /\ secret(PUp,sec_1,{Gateway,Server})
+
+	2. State  = 4 /\ RCV({PIDp'.Ng'.PIDg'.Hash(PIDs')}_PUauth) =|>
+	   State':= 7 /\ equal(789,PIDg')
+		      /\ SND({IDg.PUg}_inv(PUauth))
+		      /\ secret(PUg,sec_2,{Platform,Server})
+		      /\ Ks':=new()
+		      /\ SND({{IDp.Ng'.IDg.Hash(IDs).Ks'}_inv(PUauth)}_PUp)
+		      /\ secret(Ks',sec_3,{Platform,Server})
+		      /\ witness(Server,Platform,auth_2,Ng')
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role platform(Platform,Server,Gateway:agent, Hash:hash_func, PUauth,PUp:public_key, SND,RCV:channel(dy))
+played_by Platform def=
+
+	local
+		State			: nat,
+		Ng,Np			: text,
+		IDg,IDs,IDp		: nat,
+		PUg			: public_key,
+		Ks			: symmetric_key
+
+	init
+		State :=4 /\ IDp:=777
+
+	transition
+
+	1. State  = 4 /\ RCV({Ng'.IDg'.Hash(IDs')}_PUp) =|>
+	   State':= 5 /\ SND({IDp.Ng'.IDg'.Hash(IDs')}_PUauth)
+
+	2. State  = 5 /\ RCV({IDg.PUg'}_inv(PUauth)) =|>
+	   State':= 6
+
+	3. State  = 6 /\ RCV({{IDp.Ng.IDg.Hash(IDs).Ks'}_inv(PUauth)}_PUp) =|>
+	   State':= 8 /\ request(Platform,Server,auth_2,Ng)
+		      /\ Np':=new()
+		      /\ SND({{IDp.Ng.IDg.Hash(IDs).Ks'}_inv(PUauth).Np'}_PUg)
+		      /\ witness(Platform,Gateway,auth_3,Ng)
+
+	4. State  = 8 /\ RCV({Np}_Ks) =|>
+	   State':= 9 /\ request(Platform,Gateway,auth_4,Np)		      
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role session(Sensor,Gateway,Server,Platform:agent, Hash:hash_func, PUg,PUauth,PUp:public_key)
+def=
+	local
+		SND1,RCV1,SND2,RCV2,SND3,RCV3,SND4,RCV4:channel(dy)
+
+	composition
+		platform(Platform,Server,Gateway,Hash,PUauth,PUp,SND4,RCV4)
+		/\server(Server,Gateway,Platform,Hash,PUg,PUauth,PUp,SND3,RCV3)
+		/\gateway(Sensor,Gateway,Server,Platform,Hash,PUg,PUauth,SND1,RCV1)
+		/\sensor(Sensor,Gateway,Hash,PUg,SND2,RCV2)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+role environment() def=
+
+	const	s,g,sv,p					:agent,
+		h						:hash_func,
+		pug,puauth,pup					:public_key,
+		auth_1,auth_2,auth_3,auth_4,sec_1,sec_2,sec_3	:protocol_id
+
+	intruder_knowledge = {s,g,sv,p}
+
+	composition
+		session(s,g,sv,p,h,pug,puauth,pup)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+goal
+	authentication_on auth_1
+	authentication_on auth_2
+	authentication_on auth_3
+	authentication_on auth_4
+	secrecy_of sec_1
+	secrecy_of sec_2
+	secrecy_of sec_3
+
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+environment()
