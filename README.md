@@ -1,22 +1,26 @@
 <h3>보안 공학 프로젝트 - 정형 검증 기반 경량 인증 프로토콜 분석 </h3>
 
+
+
 🔍 프로젝트 개요
 본 프로젝트는 논문 「전천후 생활 지원 시스템을 위한 경량 인증 프로토콜」의 내용을 기반으로, AAL(Ambient Assisted Living) 시스템을 위한 경량 인증 프로토콜의 구조 및 보안성 검증을 HLPSL 및 AVISPA 툴을 이용해 수행하였습니다.
+
 
 📄 대상 논문
 A Lightweight Authentication Protocol for Ambient Assisted Living System저자: 이명규, 황보택근
 
-🧪 정형 검증 (Formal Verification)
 
-🔧 사용 도구
+🧪 정형 검증 (Formal Verification)
 HLPSL: 프로토콜 기술 언어
 AVISPA: 자동 보안 프로토콜 검증 툴
 Backend: CL-Atse
 Modes: Simplify / Verbose
 
+
 ✅ 검증 목표
 메시지 기밀성 (Confidentiality)
 메시지 무결성 (Integrity)
+
 
 🔬 결과
 - Simplify
