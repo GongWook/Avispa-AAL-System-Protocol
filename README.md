@@ -1,6 +1,4 @@
-A Lightweight Authentication Protocol for AAL System
-
-보안 공학 프로젝트 - 정형 검증 기반 경량 인증 프로토콜 분석 
+<h3>보안 공학 프로젝트 - 정형 검증 기반 경량 인증 프로토콜 분석 </h3>
 
 🔍 프로젝트 개요
 본 프로젝트는 논문 「전천후 생활 지원 시스템을 위한 경량 인증 프로토콜」의 내용을 기반으로, AAL(Ambient Assisted Living) 시스템을 위한 경량 인증 프로토콜의 구조 및 보안성 검증을 HLPSL 및 AVISPA 툴을 이용해 수행하였습니다.
